@@ -7,6 +7,11 @@
 # - control IR signal transmitters
 # - control temperature and humidity sensor
 
+# Import modules to manipulate files
+import sys
+import os
+import pathlib
+
 # Import modules for Flask web app
 from flask import request, redirect, url_for, render_template, flash, session
 from remoteir import app
@@ -31,6 +36,7 @@ lightLiving = irlightPanasonic.IRlightPanasonic(ir, ch = 2)
 
 # Define instances for DHT22 sensor
 GPIO_DHT22 = 19
+LOCKFILE = 'DHT22_lock'
 TIMEOUT = 1
 dht22 = DHT22(GPIO_DHT22, timeout_secs = TIMEOUT, pi = pi)
 t_prev = datetime.datetime.now()
@@ -70,11 +76,22 @@ def show_dashboard():
 
     # Avoid TimeoutError exception from DHT22
     try:
+        # Wait until lock file is removed
+        while os.path.exists(LOCKFILE):
+            print(f'DHT22 is busy. Wait for {T_WAIT} sec.')
+            time.sleep(T_WAIT)
+
+        # Create lock file
+        pathlib.Path(LOCKFILE).touch()
+
         # Read sensor
         env = dht22.read(retries = 3)
 
+        # Remove lock file
+        os.remove(LOCKFILE)
+
     except (TimeoutError, AssertionError):
-        # Set dummy data
+        # Set dummy data if exception raised
         env = {'temp_c': 0, 'temp_f': 0, 'humidity': 0, 'valid': True}
 
     return render_template('index.html', nowtxt = nowtxt, env = env)
