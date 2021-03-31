@@ -1,0 +1,65 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">現在の温湿度</h5>
+        <div class="table-responsive-sm">
+            <table class="table">
+                <tr><th>時刻</th><td>{{ nowtxt }}</td></tr>
+                <tr><th>温度</th><td>{{ env['temp_c'] }}&deg;C</td></tr>
+                <tr><th>湿度</th><td>{{ env['humidity'] }}%</td></tr>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">Panasonicエアコン</h5>
+        <form name="ac" action="{{ url_for('acControl') }}" method="POST">
+            <select class="form-control" name="tempsetting" id="tempsetting">
+                <option value="30">30&deg;C</option>
+                <option value="29">29&deg;C</option>
+                <option value="28">28&deg;C</option>
+                <option value="27">27&deg;C</option>
+                <option value="26">26&deg;C</option>
+                <option value="25">25&deg;C</option>
+                <option value="24">24&deg;C</option>
+                <option value="23">23&deg;C</option>
+                <option value="22">22&deg;C</option>
+                <option value="21" selected>21&deg;C</option>
+                <option value="20">20&deg;C</option>
+                <option value="19">19&deg;C</option>
+                <option value="18">18&deg;C</option>
+                <option value="17">17&deg;C</option>
+                <option value="16">16&deg;C</option>
+            </select><br/>
+            <button class="btn btn-default btn-sm" type="submit" name="command" value="heating">暖房</button>
+            <button class="btn btn-default btn-sm" type="submit" name="command" value="cooling">冷房</button>
+            <button class="btn btn-default btn-sm" type="submit" name="command" value="drying">ドライ</button>
+            <button class="btn btn-default btn-sm" type="submit" name="command" value="off">停止</button>
+        </form>
+    </div>
+</div>
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">ダイニング照明</h5>
+            <form name="lightDining" action="{{ url_for('lightDiningControl') }}" method="POST">
+                <button class="btn btn-default btn-sm" type="submit" name="command" value="on">点灯</button>
+                <button class="btn btn-default btn-sm" type="submit" name="command" value="full">全灯</button>
+                <button class="btn btn-default btn-sm" type="submit" name="command" value="night">常夜灯</button>
+                <button class="btn btn-default btn-sm" type="submit" name="command" value="off">消灯</button>
+        </form>
+    </div>
+</div>
+<div class="card">
+    <div class="card-body">
+        <h5 class="card-title">リビング照明</h5>
+        <form name="lightLiving" action="{{ url_for('lightLivingControl') }}" method="POST">
+            <button class="btn btn-default btn-sm" type="submit" name="command" value="on">点灯</button>
+            <button class="btn btn-default btn-sm" type="submit" name="command" value="full">全灯</button>
+            <button class="btn btn-default btn-sm" type="submit" name="command" value="night">常夜灯</button>
+            <button class="btn btn-default btn-sm" type="submit" name="command" value="off">消灯</button>
+        </form>
+    <div>
+</div>
+{% endblock %}
