@@ -2,19 +2,28 @@
 {% block body %}
 <div class="card">
     <div class="card-body">
-        <h5 class="card-title">現在の温湿度</h5>
+        <h5 class="card-title">現在の温度・湿度</h5>
         <div class="table-responsive-sm">
             <table class="table">
-                <tr><th>時刻</th><td>{{ nowtxt }}</td></tr>
+                <tr><th>時刻</th><td>{{ env['time'] }}</td></tr>
                 <tr><th>温度</th><td>{{ env['temp_c'] }}&deg;C</td></tr>
                 <tr><th>湿度</th><td>{{ env['humidity'] }}%</td></tr>
             </table>
+        </div>
+        <button type="button" class="btn btn-default btn-sm" data-toggle="collapse" data-target="#trend" aria-expanded="false" aria-controls="collapseExample">トレンドグラフ</button>
+    </div>
+</div>
+<div class="collapse" id="trend">
+    <div class="card">
+        <div class="card-body">
+            <h5 class="card-title">温度・湿度のトレンドグラフ</h5>
+            <img src="/graph.png" class="img-fluid"/>
         </div>
     </div>
 </div>
 <div class="card">
     <div class="card-body">
-        <h5 class="card-title">Panasonicエアコン</h5>
+        <h5 class="card-title">リビングエアコン</h5>
         <form name="ac" action="{{ url_for('acControl') }}" method="POST">
             <select class="form-control" name="tempsetting" id="tempsetting">
                 <option value="30">30&deg;C</option>

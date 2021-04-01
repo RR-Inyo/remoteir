@@ -7,24 +7,21 @@
 # - control IR signal transmitters
 # - control temperature and humidity sensor
 
-# Import modules to manipulate CSV file
-import pandas as pd
-import csv
+# Import modules to manipulate files
+import sys
+import os
+import pathlib
 
 # Import modules for Flask web app
-from flask import request, redirect, url_for, render_template, make_response, flash, session
+from flask import request, redirect, url_for, render_template, flash, session
 from remoteir import app
+import pandas as pd
 import datetime
 import time
 
-# Import Matplotlib and related modules
-from io import BytesIO
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-from matplotlib.backends.backend_agg import FigureCanvasAgg
-
 # Import modules for IR remote controller and DHT22 (aka AM2302) sensor
 import pigpio
+#from pigpio_dht import DHT22
 from lib import irxmit, irlightPanasonic, iracPanasonic
 
 # Define pigpio instance
@@ -38,7 +35,12 @@ ac = iracPanasonic.IRACPanasonic(ir)
 lightDining = irlightPanasonic.IRlightPanasonic(ir, ch = 1)
 lightLiving = irlightPanasonic.IRlightPanasonic(ir, ch = 2)
 
-# Define filename to read DHT22 data
+# Define instances for DHT22 sensor
+#GPIO_DHT22 = 19
+#LOCKFILE = 'DHT22_lock'
+#TIMEOUT = 1
+#dht22 = DHT22(GPIO_DHT22, timeout_secs = TIMEOUT, pi = pi)
+#t_prev = datetime.datetime.now()
 CSV_FILE = '/tmp/DHT22_record.csv'
 
 # Login
@@ -70,18 +72,33 @@ def show_dashboard():
     if not session.get('logged_in'):
         return redirect('/login')
 
-    # Get temperature and humidity data acquired by DHT22
-    # Read tail of CSV file and obtain latest data
-    df = pd.read_table(CSV_FILE)
-    latest = df.tail(1).values
-    t_raw = latest[0, 0]
-    t = datetime.datetime.strptime(t_raw, '%Y-%m-%d %H:%M:%S.%f')
-    t_srt = t.strftime('%Y/%m/%d %H:%M')
-    temp = latest[0, 1]
-    humid = latest[0, 2]
-    env = {'time': t_srt, 'temp_c': temp, 'humidity': humid}
+    # Get values from temperature humidity sensor
+    now = datetime.datetime.now()
+    nowtxt = f'{now.year:04d}/{now.month:02d}/{now.day:02d} {now.hour:02d}:{now.minute:02d}:{now.second:02d}'
 
-    return render_template('index.html', env = env)
+    # Avoid TimeoutError exception from DHT22
+    #try:
+        # Wait until lock file is removed
+        #while os.path.exists(LOCKFILE):
+            #print(f'DHT22 is busy. Wait for {T_WAIT} sec.')
+            #time.sleep(T_WAIT)
+
+        # Create lock file
+        #pathlib.Path(LOCKFILE).touch()
+
+        # Read sensor
+        #env = dht22.read(retries = 3)
+
+        # Remove lock file
+        #os.remove(LOCKFILE)
+
+    #except (TimeoutError, AssertionError):
+        # Set dummy data if exception raised
+        #env = {'temp_c': 0, 'temp_f': 0, 'humidity': 0, 'valid': True}
+
+    
+
+    return render_template('index.html', nowtxt = nowtxt, env = env)
 
 # Air conditioner control
 @app.route('/ac', methods=['POST'])
@@ -179,77 +196,3 @@ def lightLivingControl():
     # Return to dashboard
     flash(msg)
     return redirect(url_for('show_dashboard'))
-
-# PNG image of temperature and humidity trend graph made by Matplotlib
-@app.route('/graph.png')
-def graph():
-
-    # Define graph and font sizes
-    G_WIDTH = 6
-    G_HEIGHT = 4
-    G_FONTSIZE = 14
-    G_FONT_FAMILY = 'IPAexGothic'
-
-    # Read CSV file
-    with open('/tmp/DHT22_record.csv') as f:
-        reader = csv.reader(f, delimiter = '\t')
-        t, temp, humid = [], [], []
-        for l in reader:
-            t.append(datetime.datetime.strptime(l[0], '%Y-%m-%d %H:%M:%S.%f'))
-            temp.append(float(l[1]))
-            humid.append(float(l[2]))
-
-    # Define Matplotlib graph handler and adjustment
-    fig, ax = plt.subplots(2, 1, figsize = (G_WIDTH, G_HEIGHT))
-    #fig.patch.set_facecolor('lavender')
-    plt.subplots_adjust(left = 0.1, right = 0.95, bottom = 0.15, top = 0.95)
-    plt.rcParams['font.family'] = G_FONT_FAMILY
-    plt.rcParams["font.size"] = G_FONTSIZE
-    plt.subplots_adjust(hspace = 0.1)
-
-    # Set datetime format
-    if len(t) < 360:    # Data less than 6 hours
-        tick = 1
-    elif len(t) < 720:  # Data less than 12 hours
-        tick = 3
-    elif len(t) < 1440: # Data less than 24 hours
-        tick = 6
-    elif len(t) < 2160: # Data less than 36 hours
-        tick = 8
-    elif len(t) < 2880: # Data less than 48 hours
-        tick = 12
-    else:               # Data equal to or longer than 48 hours
-        tick = 24
-    xloc = mdates.HourLocator(byhour = range(0, 24, tick), tz = None)
-    xfmt = mdates.DateFormatter('%m/%d\n%H:%M')
-
-    # Plot temperature
-    ax[0].fill_between(t, temp, color = 'firebrick', alpha = 0.2)
-    ax[0].plot(t, temp, label = '温度 [°C]', color = 'firebrick')
-    ax[0].xaxis.set_major_locator(xloc)
-    ax[0].xaxis.set_major_formatter(xfmt)
-    ax[0].axes.xaxis.set_ticklabels([])
-    ax[0].set_ylim(5, 35)
-    ax[0].legend(loc = 'lower left')
-    ax[0].grid()
-
-    # Plot humidity
-    ax[1].fill_between(t, humid, color = 'royalblue', alpha = 0.2)
-    ax[1].plot(t, humid, label = '湿度 [%]', color = 'royalblue')
-    ax[1].xaxis.set_major_locator(xloc)
-    ax[1].xaxis.set_major_formatter(xfmt)
-    ax[1].set_ylim(10, 70)
-    ax[1].legend(loc = 'lower left')
-    ax[1].grid()
-
-    # Output figure to canvas
-    canvas = FigureCanvasAgg(fig)
-    buf = BytesIO()
-    canvas.print_png(buf)
-    data = buf.getvalue()
-
-    # Generate and return response
-    response = make_response(data)
-    response.headers['Content-Type'] = 'image/png'
-    response.headers['Content-Length'] = len(data)
-    return response
